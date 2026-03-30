@@ -3,6 +3,58 @@
 import { useState, useRef, useEffect } from 'react';
 import { SendHorizontal, Share2, Menu, X, Wifi, WifiOff } from 'lucide-react';
 
+// Lightweight markdown renderer for chat messages
+function renderMarkdown(text) {
+  if (!text) return null;
+
+  // Split into paragraphs by double newlines
+  const paragraphs = text.split(/\n\n+/);
+
+  return paragraphs.map((para, pIdx) => {
+    // Split paragraph into lines
+    const lines = para.split('\n');
+
+    // Check if this paragraph is a list (lines starting with - or *)
+    const isList = lines.every(l => /^\s*[-*]\s/.test(l) || l.trim() === '');
+    if (isList) {
+      const items = lines.filter(l => /^\s*[-*]\s/.test(l));
+      return (
+        <ul key={pIdx} className="list-disc list-inside my-1 space-y-0.5">
+          {items.map((item, i) => (
+            <li key={i}>{renderInline(item.replace(/^\s*[-*]\s+/, ''))}</li>
+          ))}
+        </ul>
+      );
+    }
+
+    return (
+      <p key={pIdx} className={pIdx > 0 ? 'mt-2' : ''}>
+        {lines.map((line, lIdx) => (
+          <span key={lIdx}>
+            {lIdx > 0 && <br />}
+            {renderInline(line)}
+          </span>
+        ))}
+      </p>
+    );
+  });
+}
+
+// Render inline markdown: **bold**, *italic*, and phone/address formatting
+function renderInline(text) {
+  if (!text) return null;
+
+  // Split by **bold** patterns
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i} className="font-semibold text-white">{part.slice(2, -2)}</strong>;
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
+
 export default function Home() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -297,7 +349,7 @@ export default function Home() {
                       ILH
                     </div>
                     <div className="bg-white/5 border border-white/10 rounded-2xl rounded-bl-md px-4 py-2 max-w-[85%] break-words">
-                      <p className="text-sm leading-relaxed text-gray-100">{msg.content}</p>
+                      <div className="text-sm leading-relaxed text-gray-100 markdown-content">{renderMarkdown(msg.content)}</div>
                       <div className="text-xs text-white/60 mt-1 flex justify-between items-center">
                         <span>
                           {new Date(parseInt(msg.id)).toLocaleTimeString([], {
